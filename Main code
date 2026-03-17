@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const FINNHUB_KEY = "d6scl5hr01qj447b69u0d6scl5hr01qj447b69ug";
-const AV_KEY = "ZEMML9K7KM2X2KYE";
+const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_KEY;
+const AV_KEY = import.meta.env.VITE_AV_KEY;
 
 // ── 30 Curated AI & Robotics Stocks (2026 Analyst Research) ─────────────────
 const UNIVERSE = {
