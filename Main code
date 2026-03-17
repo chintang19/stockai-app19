@@ -1,0 +1,461 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+const FINNHUB_KEY = "d6scl5hr01qj447b69u0d6scl5hr01qj447b69ug";
+const AV_KEY = "ZEMML9K7KM2X2KYE";
+
+// ── 30 Curated AI & Robotics Stocks (2026 Analyst Research) ─────────────────
+const UNIVERSE = {
+  // 🧠 AI Infrastructure
+  NVDA: { name:"NVIDIA Corp.",          sector:"AI Infrastructure",  cat:"ai",    seed:875,  risk:"Medium", rating:"Strong Buy", why:"Powers ALL AI — chips, Isaac robotics platform, Omniverse. #1 AI infrastructure play. Jensen Huang declared 'ChatGPT moment for robotics is here' at CES 2026." },
+  AMD:  { name:"Advanced Micro Devices",sector:"AI Infrastructure",  cat:"ai",    seed:178,  risk:"Medium", rating:"Buy",        why:"Leader in AI inference chips & data center CPUs. OpenAI & Meta committed large GPU orders. Seeking Alpha Quant Strong Buy." },
+  AVGO: { name:"Broadcom Inc.",         sector:"AI Infrastructure",  cat:"ai",    seed:165,  risk:"Low",    rating:"Buy",        why:"Builds custom AI ASICs for Google, Meta, Apple. Essential 'picks & shovels' AI play with 38% P/E." },
+  TSM:  { name:"Taiwan Semiconductor",  sector:"AI Infrastructure",  cat:"ai",    seed:168,  risk:"Medium", rating:"Strong Buy", why:"Manufactures virtually ALL advanced AI chips. Virtual monopoly on cutting-edge chip production." },
+  MU:   { name:"Micron Technology",     sector:"AI Memory",          cat:"ai",    seed:95,   risk:"Medium", rating:"Buy",        why:"Surging HBM memory demand from AI buildout. Seeking Alpha Quant Strong Buy rating 2026." },
+  ORCL: { name:"Oracle Corp.",          sector:"AI Infrastructure",  cat:"ai",    seed:155,  risk:"Low",    rating:"Buy",        why:"$300B deal to supply compute to OpenAI. AI data center spending reaching $50B in fiscal 2026." },
+  NBIS: { name:"Nebius Group",          sector:"AI Cloud",           cat:"ai",    seed:38,   risk:"High",   rating:"Strong Buy", why:"Full-stack AI infrastructure + cloud. 200%+ gain past year. Also holds large stake in Avride (autonomous vehicles). 2.5GW power by end of 2026." },
+  CDNS: { name:"Cadence Design Systems",sector:"AI Chip Design",     cat:"ai",    seed:278,  risk:"Low",    rating:"Buy",        why:"EDA software used to design every AI chip in existence. Zacks Top Pick for robotics 2026." },
+  ADI:  { name:"Analog Devices",        sector:"AI Semiconductors",  cat:"ai",    seed:215,  risk:"Low",    rating:"Strong Buy", why:"Analog chips & sensors power robot nervous systems. Seeking Alpha Quant Strong Buy. Resilient dividend + AI growth." },
+  TXN:  { name:"Texas Instruments",     sector:"AI Semiconductors",  cat:"ai",    seed:178,  risk:"Low",    rating:"Buy",        why:"Supplies analog chips, sensors & motor controllers for ALL robot types. Low-risk robotics exposure via mature profitable business." },
+  // 🤖 Humanoid & Physical Robotics
+  TSLA: { name:"Tesla Inc.",            sector:"Humanoid Robotics",  cat:"robot", seed:172,  risk:"High",   rating:"Hold",       why:"Optimus humanoid robot V3 prototype targeted Q1 2026. Goal: 1 million robots/year by end 2026. Analyst consensus: 45% Buy, 35% Hold, 20% Sell." },
+  SYM:  { name:"Symbotic Inc.",         sector:"Warehouse Robotics", cat:"robot", seed:18,   risk:"High",   rating:"Buy",        why:"AI-powered warehouse robots. Walmart deal automating 42 distribution centers. New Accelerated Pickup and Delivery contract Jan 2026." },
+  TER:  { name:"Teradyne Inc.",         sector:"Collaborative Robots",cat:"robot",seed:105,  risk:"Medium", rating:"Buy",        why:"Universal Robots cobots for SMEs. 47% of small/mid manufacturers now use cobots, up from 27% two years ago. New Michigan hub opened 2026." },
+  ROK:  { name:"Rockwell Automation",   sector:"Industrial Robotics", cat:"robot",seed:248,  risk:"Low",    rating:"Buy",        why:"Legacy player pivoting to smart manufacturing. NVIDIA partnership to integrate AI into autonomous mobile robots (AMRs). Key 2026 catalyst." },
+  ZBRA: { name:"Zebra Technologies",    sector:"Warehouse Automation",cat:"robot",seed:310,  risk:"Low",    rating:"Buy",        why:"RFID, barcode & machine vision — digital backbone of logistics automation. Motley Fool recommended." },
+  DE:   { name:"John Deere & Co.",      sector:"Agricultural Robotics",cat:"robot",seed:398, risk:"Low",    rating:"Buy",        why:"Autonomous tractors + AI 'See & Spray' tech. Expanded to Europe & Brazil in 2026. Solving chronic rural labor shortages." },
+  PATH: { name:"UiPath Inc.",           sector:"Robotics Software",  cat:"robot", seed:14,   risk:"Medium", rating:"Buy",        why:"Maestro platform coordinates AI agents + software robots across enterprise workflows. First GAAP profitable quarter Q1 2026. Zacks #1 Rank." },
+  // 🏥 Medical Robotics
+  ISRG: { name:"Intuitive Surgical",    sector:"Medical Robotics",   cat:"medical",seed:510, risk:"Low",    rating:"Strong Buy", why:"10,763 da Vinci systems globally. Revenue +23% YoY. 13-15% procedure growth projected 2026. New FDA approvals for lung biopsy procedures." },
+  SYK:  { name:"Stryker Corp.",         sector:"Medical Robotics",   cat:"medical",seed:375, risk:"Low",    rating:"Buy",        why:"Mako SmartRobotics for joint replacement. 38 analysts rated Buy. High-single to low-double-digit growth. Surgical robotics market hits $14.45B in 2026." },
+  MDT:  { name:"Medtronic PLC",         sector:"Medical Robotics",   cat:"medical",seed:87,  risk:"Low",    rating:"Hold",       why:"Hugo robotic surgery system secured FDA clearance for urologic procedures Jan 2026. Intensifying competition with Intuitive Surgical." },
+  // 💻 AI Software & Platforms
+  MSFT: { name:"Microsoft Corp.",       sector:"AI Software",        cat:"software",seed:415,risk:"Low",   rating:"Buy",        why:"OpenAI partnership + Azure AI. $500B+ annual AI capex projected mid-decade. Copilot embedded across entire ecosystem. Nebius partnership." },
+  GOOGL:{ name:"Alphabet Inc.",         sector:"AI Software",        cat:"software",seed:169,risk:"Low",   rating:"Buy",        why:"Waymo robotaxis, Gemini AI, Google DeepMind Gemini Robotics (powering Boston Dynamics Atlas). $175B capex in 2026." },
+  META: { name:"Meta Platforms",        sector:"AI Software",        cat:"software",seed:525,risk:"Low",   rating:"Buy",        why:"Llama open-source AI, Reality Labs, AI-powered advertising. Heavy AI infrastructure investment." },
+  AAPL: { name:"Apple Inc.",            sector:"AI Software",        cat:"software",seed:213,risk:"Low",   rating:"Hold",       why:"Apple Intelligence + custom M-series silicon. Massive installed base for AI feature monetization." },
+  AMZN: { name:"Amazon.com Inc.",       sector:"AI + Cloud + Robots",cat:"software",seed:191,risk:"Low",   rating:"Strong Buy", why:"AWS AI services + Alexa + warehouse robotics (Proteus, Sparrow). Capex exceeds $500B annually by mid-decade." },
+  // 📦 ETFs (Diversified Exposure)
+  BOTZ: { name:"Global X Robotics ETF",  sector:"Robotics ETF",     cat:"etf",   seed:28,   risk:"Medium", rating:"Buy",        why:"50 robotics companies. Analysts predict 20-30% upside 2026 as AI shifts from digital to physical. 1.25 beta." },
+  ROBO: { name:"ROBO Global Robot. ETF", sector:"Robotics ETF",     cat:"etf",   seed:62,   risk:"Medium", rating:"Buy",        why:"78 equal-weighted holdings including AutoStore and IBM. 15-25% return projected 2026. Best for patient investors." },
+  AIQ:  { name:"Global X AI & Tech ETF", sector:"AI ETF",           cat:"etf",   seed:35,   risk:"Medium", rating:"Buy",        why:"88 stocks via Indxx AI & Big Data Index. 31% YTD return in 2025. Less Nvidia-dependent. Strong Asia AI exposure." },
+  // 🚀 High-Growth Speculative
+  CGNX: { name:"Cognex Corp.",           sector:"Machine Vision",   cat:"robot", seed:38,   risk:"Medium", rating:"Buy",        why:"Machine vision for logistics — scans barcodes & inspects packages. New 3D vision system for bin picking released 2026. Robots need Cognex to 'see'." },
+  TRMB: { name:"Trimble Inc.",           sector:"Autonomous Systems",cat:"robot", seed:68,   risk:"Medium", rating:"Buy",        why:"RTX & ProPoint Go powering Lucid Gravity hands-free systems. Integrates with Boston Dynamics Spot robots. Zacks Rank #2 Jan 2026." },
+};
+
+const CATS = {
+  all:     { label:"All 30 Stocks",        emoji:"📊", color:"#6366f1" },
+  ai:      { label:"AI Infrastructure",    emoji:"🧠", color:"#a855f7" },
+  robot:   { label:"Robotics",             emoji:"🦾", color:"#22d3a0" },
+  medical: { label:"Medical Robotics",     emoji:"🏥", color:"#f472b6" },
+  software:{ label:"AI Software",          emoji:"💻", color:"#3b82f6" },
+  etf:     { label:"ETFs",                 emoji:"📦", color:"#f59e0b" },
+};
+
+const RISK_COLOR = { Low:"#22d3a0", Medium:"#f59e0b", High:"#f87171" };
+const RATING_COLOR = { "Strong Buy":"#22d3a0","Buy":"#86efac","Hold":"#f59e0b","Sell":"#f87171" };
+
+const fmtVol=(n)=>{if(!n||isNaN(n))return"N/A";if(n>=1e9)return(n/1e9).toFixed(1)+"B";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"K";return String(n);};
+const fmtMktCap=(n)=>{if(!n||isNaN(n))return"N/A";if(n>=1e12)return(n/1e12).toFixed(2)+"T";if(n>=1e9)return(n/1e9).toFixed(1)+"B";return(n/1e6).toFixed(0)+"M";};
+
+const Sparkline=({data,positive,width=80,height=28})=>{
+  if(!data||data.length<2)return null;
+  const min=Math.min(...data),max=Math.max(...data),range=max-min||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*width},${height-((v-min)/range)*height}`).join(" ");
+  return<svg width={width} height={height} style={{overflow:"visible"}}><polyline points={pts} fill="none" stroke={positive?"#22d3a0":"#f87171"} strokeWidth="1.5" strokeLinejoin="round"/></svg>;
+};
+
+export default function StockAI(){
+  const [watchlist,setWatchlist]=useState(["NVDA","TSLA","ISRG","SYM","NBIS"]);
+  const [prices,setPrices]=useState({});
+  const [selected,setSelected]=useState("NVDA");
+  const [activeCat,setActiveCat]=useState("all");
+  const [view,setView]=useState("main"); // main | browser
+  const [messages,setMessages]=useState([{role:"assistant",content:"👋 Welcome to StockAI!\n\nI'm loaded with 30 analyst-curated AI & Robotics stocks for 2026 — spanning AI infrastructure, humanoid robots, medical robotics, warehouse automation, and more.\n\nI'm connected to live Finnhub + Alpha Vantage data. Try asking:\n• \"Which AI stock should I buy first?\"\n• \"Compare NVDA vs AMD for 2026\"\n• \"Best robotics stock for a beginner?\"\n• \"Build me a $10k starter portfolio\"\n\nWhat would you like to explore?"}]);
+  const [input,setInput]=useState("");
+  const [chatLoading,setChatLoading]=useState(false);
+  const [activeTab,setActiveTab]=useState("chat");
+  const [dataSource,setDataSource]=useState("loading");
+  const [lastUpdated,setLastUpdated]=useState(null);
+  const [browserCat,setBrowserCat]=useState("all");
+  const sparklines=useRef({});
+  const chatEndRef=useRef(null);
+  const profileCache=useRef({});
+  const fetchingRef=useRef(false);
+  const avCallsToday=useRef(0);
+
+  const makeSpark=(base,pos)=>{const pts=[];let v=base*0.97;for(let i=0;i<20;i++){v+=(Math.random()-(pos?0.4:0.6))*base*0.01;pts.push(v);}pts[pts.length-1]=base;return pts;};
+
+  const fetchFinnhub=async(ticker)=>{
+    const res=await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`);
+    const q=await res.json();
+    if(!q||!q.c||q.c===0)return null;
+    let profile=profileCache.current[ticker];
+    if(!profile){try{const pr=await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_KEY}`);profile=await pr.json();profileCache.current[ticker]=profile;}catch{profile={};}}
+    const change=q.c-q.pc,changePct=q.pc>0?(change/q.pc)*100:0;
+    return{name:profile.name||UNIVERSE[ticker]?.name||ticker,price:+q.c.toFixed(2),change:+change.toFixed(2),changePct:+changePct.toFixed(2),high:q.h||0,low:q.l||0,open:q.o||0,prevClose:q.pc||0,volume:fmtVol(null),mktCap:fmtMktCap(profile.marketCapitalization?profile.marketCapitalization*1e6:null),pe:UNIVERSE[ticker]?.pe||"N/A",sector:UNIVERSE[ticker]?.sector||profile.finnhubIndustry||"N/A",live:true,src:"Finnhub"};
+  };
+
+  const fetchAV=async(ticker)=>{
+    if(avCallsToday.current>=24)return null;
+    avCallsToday.current++;
+    const res=await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${AV_KEY}`);
+    const data=await res.json();
+    const q=data["Global Quote"];
+    if(!q||!q["05. price"])return null;
+    const price=parseFloat(q["05. price"]),change=parseFloat(q["09. change"]),pct=parseFloat(q["10. change percent"]?.replace("%",""));
+    return{name:UNIVERSE[ticker]?.name||ticker,price:+price.toFixed(2),change:+change.toFixed(2),changePct:+pct.toFixed(2),high:+parseFloat(q["03. high"]).toFixed(2),low:+parseFloat(q["04. low"]).toFixed(2),open:+parseFloat(q["02. open"]).toFixed(2),prevClose:+parseFloat(q["08. previous close"]).toFixed(2),volume:fmtVol(parseInt(q["06. volume"])),mktCap:"N/A",pe:UNIVERSE[ticker]?.pe||"N/A",sector:UNIVERSE[ticker]?.sector||"N/A",live:true,src:"AlphaVantage"};
+  };
+
+  const fetchAll=useCallback(async(tickers)=>{
+    if(fetchingRef.current)return;
+    fetchingRef.current=true;
+    const updated={};let anylive=false;
+    for(const t of tickers){
+      let d=null;
+      try{d=await fetchFinnhub(t);if(d)anylive=true;}catch{}
+      if(!d){try{d=await fetchAV(t);if(d)anylive=true;}catch{}}
+      if(!d){const s=UNIVERSE[t]?.seed||100;d={name:UNIVERSE[t]?.name||t,price:s,change:+(Math.random()*4-2).toFixed(2),changePct:+(Math.random()*3-1.5).toFixed(2),high:+(s*1.02).toFixed(2),low:+(s*0.98).toFixed(2),open:+(s*0.995).toFixed(2),prevClose:+(s*0.99).toFixed(2),volume:"N/A",mktCap:"N/A",pe:UNIVERSE[t]?.pe||"N/A",sector:UNIVERSE[t]?.sector||"N/A",live:false,src:"demo"};}
+      updated[t]=d;
+      if(!sparklines.current[t])sparklines.current[t]=makeSpark(d.price,d.change>0);
+      await new Promise(r=>setTimeout(r,150));
+    }
+    setPrices(p=>({...p,...updated}));
+    setDataSource(anylive?"live":"demo");
+    setLastUpdated(new Date());
+    fetchingRef.current=false;
+  },[]);
+
+  useEffect(()=>{
+    const init={};
+    Object.keys(UNIVERSE).forEach(t=>{const s=UNIVERSE[t].seed;init[t]={name:UNIVERSE[t].name,price:s,change:0,changePct:0,high:s,low:s,open:s,prevClose:s,volume:"N/A",mktCap:"N/A",pe:UNIVERSE[t].pe||"N/A",sector:UNIVERSE[t].sector,live:false,src:"loading"};sparklines.current[t]=makeSpark(s,true);});
+    setPrices(init);
+    fetchAll(watchlist);
+    const iv=setInterval(()=>fetchAll(watchlist),35000);
+    return()=>clearInterval(iv);
+  },[]);
+
+  useEffect(()=>{
+    const missing=watchlist.filter(t=>!prices[t]||!prices[t].live);
+    if(missing.length>0)fetchAll(missing);
+  },[watchlist]);
+
+  useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
+
+  const addToWatchlist=(ticker)=>{
+    if(!watchlist.includes(ticker)){setWatchlist(p=>[...p,ticker]);if(!prices[ticker]?.live)fetchAll([ticker]);}
+  };
+  const removeFromWatchlist=(ticker)=>{
+    setWatchlist(p=>p.filter(t=>t!==ticker));
+    if(selected===ticker)setSelected(watchlist.find(t=>t!==ticker)||"NVDA");
+  };
+
+  const sendMessage=async(msgOverride)=>{
+    const userMsg=msgOverride||input.trim();
+    if(!userMsg||chatLoading)return;
+    setInput("");
+    const sel=prices[selected]||{...UNIVERSE[selected],price:UNIVERSE[selected]?.seed};
+    const portfolioData=Object.keys(UNIVERSE).map(t=>{
+      const d=prices[t]||{};
+      const u=UNIVERSE[t];
+      return`${t}|${u.name}|$${d.price?.toFixed(2)||u.seed}|${d.changePct>=0?"+":""}${d.changePct?.toFixed(2)||"0"}%|${u.rating}|Risk:${u.risk}|${u.sector}`;
+    }).join("\n");
+    const newMessages=[...messages,{role:"user",content:userMsg}];
+    setMessages(newMessages);setChatLoading(true);
+    try{
+      const system=`You are an expert AI stock investment advisor with access to live 2026 market data and deep knowledge of AI & robotics sector.
+
+Always give 🟢 BUY / 🔴 SELL / 🟡 HOLD when making recommendations. Be direct, concise (under 220 words), and use bullet points for lists.
+
+SELECTED STOCK — ${selected}:
+Name: ${sel.name} | Price: $${sel.price?.toFixed(2)} | Change: ${sel.changePct>=0?"+":""}${sel.changePct?.toFixed(2)}%
+High/Low: $${sel.high?.toFixed(2)}/$${sel.low?.toFixed(2)} | MktCap: ${sel.mktCap} | Sector: ${sel.sector}
+Analyst Rating: ${UNIVERSE[selected]?.rating} | Risk: ${UNIVERSE[selected]?.risk}
+Investment Thesis: ${UNIVERSE[selected]?.why}
+
+ALL 30 STOCKS IN DATABASE (ticker|name|price|change|analyst_rating|risk|sector):
+${portfolioData}
+
+User's current watchlist: ${watchlist.join(", ")}
+Data source: ${dataSource} | Last updated: ${lastUpdated?.toLocaleTimeString()||"N/A"}
+
+Investment context from 2026 research:
+- Humanoid robotics market CAGR: 39.2% | Global robotics market projected $124B
+- Global robotics funding surpassed $10.3B in 2025 (highest since 2021)
+- Figure AI raised $1B+ at $39B valuation | Boston Dynamics Atlas now in production
+- NVIDIA declared "ChatGPT moment for robotics is here" at CES 2026
+- 47% of SMEs now use cobots (up from 27% two years ago)
+- Surgical robotics market hits $14.45B in 2026
+
+IMPORTANT: Always end with: "⚠️ This is AI-generated analysis for educational purposes only. Not licensed financial advice. Always do your own research and consult a financial advisor before investing."`;
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system,messages:newMessages.map(m=>({role:m.role,content:m.content}))})});
+      const data=await resp.json();
+      const reply=data.content?.map(b=>b.text||"").join("")||"Sorry, I couldn't process that.";
+      setMessages([...newMessages,{role:"assistant",content:reply}]);
+    }catch{setMessages([...newMessages,{role:"assistant",content:"⚠️ Connection error. Please try again."}]);}
+    setChatLoading(false);
+  };
+
+  const selData=prices[selected]||{price:UNIVERSE[selected]?.seed||0,change:0,changePct:0,high:0,low:0,open:0,prevClose:0,mktCap:"N/A",volume:"N/A"};
+  const selUni=UNIVERSE[selected]||{};
+  const isPos=(selData.changePct||0)>=0;
+  const filteredBrowser=Object.keys(UNIVERSE).filter(t=>browserCat==="all"||UNIVERSE[t].cat===browserCat);
+  const quickPrompts=[`Best buy from watchlist?`,`Analyze ${selected} for 2026`,`Build me a $10k AI portfolio`,`Safest robotics stock?`];
+
+  return(
+    <div style={{minHeight:"100vh",background:"#080c18",color:"#e2e8f0",fontFamily:"'DM Sans',sans-serif",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+        @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+        @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        ::-webkit-scrollbar{width:3px;height:3px}
+        ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:2px}
+        ::-webkit-scrollbar-track{background:transparent}
+        .stock-row:hover{background:rgba(99,102,241,0.08)!important}
+        .card-hover:hover{border-color:#6366f1!important;transform:translateY(-1px);transition:all 0.2s}
+        .btn-hover:hover{filter:brightness(1.15)}
+        input:focus{border-color:#6366f1!important}
+      `}</style>
+
+      {/* ── TOP BAR ── */}
+      <div style={{padding:"11px 20px",background:"#0a0e1a",borderBottom:"1px solid #1a2238",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:34,height:34,borderRadius:9,background:"linear-gradient(135deg,#6366f1,#22d3a0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>📈</div>
+          <div>
+            <div style={{fontSize:15,fontWeight:700,letterSpacing:"-0.5px"}}>StockAI <span style={{fontSize:11,color:"#475569",fontWeight:400}}>· 30 AI & Robotics Picks 2026</span></div>
+            <div style={{fontSize:9,color:"#334155",fontFamily:"'DM Mono'",letterSpacing:"1.5px"}}>POWERED BY FINNHUB + ALPHA VANTAGE + CLAUDE AI</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          {dataSource==="live"&&<div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:6,height:6,borderRadius:"50%",background:"#22d3a0",animation:"pulse 2s infinite"}}/><span style={{fontSize:10,color:"#22d3a0",fontFamily:"'DM Mono'"}}>LIVE DATA</span></div>}
+          {dataSource==="demo"&&<span style={{fontSize:10,color:"#64748b",fontFamily:"'DM Mono'"}}>○ DEMO MODE</span>}
+          {dataSource==="loading"&&<span style={{fontSize:10,color:"#f59e0b",fontFamily:"'DM Mono'"}}>⟳ CONNECTING...</span>}
+          {lastUpdated&&<span style={{fontSize:9,color:"#334155",fontFamily:"'DM Mono'"}}>{lastUpdated.toLocaleTimeString()}</span>}
+          <button onClick={()=>fetchAll(watchlist)} className="btn-hover" style={{background:"rgba(99,102,241,0.12)",border:"1px solid rgba(99,102,241,0.25)",borderRadius:6,color:"#a5b4fc",padding:"4px 10px",fontSize:11,cursor:"pointer"}}>↻</button>
+          <button onClick={()=>setView(v=>v==="browser"?"main":"browser")} className="btn-hover" style={{background:view==="browser"?"rgba(34,211,160,0.15)":"rgba(99,102,241,0.12)",border:`1px solid ${view==="browser"?"rgba(34,211,160,0.3)":"rgba(99,102,241,0.25)"}`,borderRadius:6,color:view==="browser"?"#22d3a0":"#a5b4fc",padding:"4px 11px",fontSize:11,cursor:"pointer",fontWeight:600}}>
+            {view==="browser"?"← Back":"🔍 Browse All 30 Stocks"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── STOCK BROWSER VIEW ── */}
+      {view==="browser"&&(
+        <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+          <div style={{padding:"14px 20px 10px",background:"#0a0e1a",borderBottom:"1px solid #1a2238",flexShrink:0}}>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#94a3b8"}}>Browse & Add Stocks to Your Watchlist</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {Object.entries(CATS).map(([k,v])=>(
+                <button key={k} onClick={()=>setBrowserCat(k)} className="btn-hover" style={{background:browserCat===k?`${v.color}22`:"rgba(255,255,255,0.04)",border:`1px solid ${browserCat===k?v.color:"#1e293b"}`,borderRadius:20,color:browserCat===k?v.color:"#64748b",padding:"4px 13px",fontSize:11,cursor:"pointer",fontWeight:600,transition:"all 0.15s"}}>
+                  {v.emoji} {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:"14px 20px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))",gap:10}}>
+              {filteredBrowser.map(ticker=>{
+                const d=prices[ticker]||{price:UNIVERSE[ticker].seed,change:0,changePct:0};
+                const u=UNIVERSE[ticker];
+                const pos=(d.changePct||0)>=0;
+                const inWatch=watchlist.includes(ticker);
+                const spark=sparklines.current[ticker]||[];
+                return(
+                  <div key={ticker} className="card-hover" style={{background:"#0d1326",border:`1px solid ${inWatch?"#6366f1":"#1a2238"}`,borderRadius:12,padding:"13px 14px",cursor:"pointer",animation:"fadein 0.3s ease"}} onClick={()=>{setSelected(ticker);setView("main");setActiveTab("chat");}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{flex:1,marginRight:8}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                          <span style={{fontSize:14,fontWeight:700}}>{ticker}</span>
+                          <span style={{fontSize:9,background:`${CATS[u.cat]?.color||"#6366f1"}22`,color:CATS[u.cat]?.color||"#6366f1",padding:"1px 6px",borderRadius:10,fontWeight:600}}>{CATS[u.cat]?.emoji} {u.sector}</span>
+                        </div>
+                        <div style={{fontSize:10,color:"#475569"}}>{u.name}</div>
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontSize:15,fontWeight:700,fontFamily:"'DM Mono'"}}>${d.price?.toFixed(2)}</div>
+                        <div style={{fontSize:10,color:pos?"#22d3a0":"#f87171",fontFamily:"'DM Mono'"}}>{pos?"▲":"▼"} {Math.abs(d.changePct||0).toFixed(2)}%</div>
+                      </div>
+                    </div>
+                    <div style={{margin:"8px 0 4px"}}>{spark.length>1&&<Sparkline data={spark} positive={pos} width={280} height={28}/>}</div>
+                    <div style={{fontSize:10,color:"#64748b",lineHeight:1.4,marginBottom:8}}>{u.why.slice(0,90)}...</div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{display:"flex",gap:5}}>
+                        <span style={{fontSize:9,background:`${RATING_COLOR[u.rating]||"#6366f1"}22`,color:RATING_COLOR[u.rating]||"#6366f1",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{u.rating}</span>
+                        <span style={{fontSize:9,background:`${RISK_COLOR[u.risk]}22`,color:RISK_COLOR[u.risk],padding:"2px 6px",borderRadius:4,fontWeight:600}}>Risk: {u.risk}</span>
+                      </div>
+                      <button onClick={e=>{e.stopPropagation();inWatch?removeFromWatchlist(ticker):addToWatchlist(ticker);}} className="btn-hover" style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"none",cursor:"pointer",background:inWatch?"rgba(248,113,113,0.15)":"rgba(34,211,160,0.15)",color:inWatch?"#f87171":"#22d3a0",transition:"all 0.15s"}}>
+                        {inWatch?"− Remove":"+ Watchlist"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MAIN VIEW ── */}
+      {view==="main"&&(
+        <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+          {/* Sidebar */}
+          <div style={{width:215,background:"#0a0e1a",borderRight:"1px solid #1a2238",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
+            <div style={{padding:"10px 13px 5px",fontSize:9,color:"#334155",fontWeight:700,letterSpacing:"1.5px",fontFamily:"'DM Mono'"}}>MY WATCHLIST</div>
+            <div style={{flex:1,overflowY:"auto"}}>
+              {watchlist.map(ticker=>{
+                const d=prices[ticker]||{price:UNIVERSE[ticker]?.seed||0,change:0,changePct:0};
+                const u=UNIVERSE[ticker]||{};
+                const pos=(d.changePct||0)>=0;
+                const spark=sparklines.current[ticker]||[];
+                return(
+                  <div key={ticker} className="stock-row" onClick={()=>setSelected(ticker)} style={{padding:"9px 13px",cursor:"pointer",background:selected===ticker?"rgba(99,102,241,0.12)":"transparent",borderLeft:selected===ticker?"2px solid #6366f1":"2px solid transparent",transition:"all 0.12s",position:"relative"}}>
+                    <div style={{display:"flex",justifyContent:"space-between"}}>
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:12,fontWeight:600,color:selected===ticker?"#a5b4fc":"#e2e8f0"}}>{ticker}</span>
+                          {d.live&&<div style={{width:4,height:4,borderRadius:"50%",background:"#22d3a0"}}/>}
+                        </div>
+                        <div style={{fontSize:9,color:"#334155",marginTop:1}}>{u.sector}</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:11,fontWeight:600,fontFamily:"'DM Mono'"}}>${d.price?.toFixed(2)||"--"}</div>
+                        <div style={{fontSize:9,color:pos?"#22d3a0":"#f87171",fontFamily:"'DM Mono'"}}>{pos?"▲":"▼"}{Math.abs(d.changePct||0).toFixed(2)}%</div>
+                      </div>
+                    </div>
+                    <div style={{marginTop:4}}>{spark.length>1&&<Sparkline data={spark} positive={pos} width={166} height={18}/>}</div>
+                    <div onClick={e=>{e.stopPropagation();removeFromWatchlist(ticker);}} onMouseOver={e=>e.currentTarget.style.opacity="1"} onMouseOut={e=>e.currentTarget.style.opacity="0"} style={{position:"absolute",top:6,right:8,fontSize:9,color:"#475569",cursor:"pointer",opacity:0,transition:"opacity 0.15s"}}>✕</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{padding:"10px 13px",borderTop:"1px solid #1a2238"}}>
+              <button onClick={()=>setView("browser")} style={{width:"100%",background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(34,211,160,0.1))",border:"1px solid rgba(99,102,241,0.3)",borderRadius:8,color:"#a5b4fc",padding:"7px",fontSize:11,cursor:"pointer",fontWeight:600,fontFamily:"'DM Sans'"}}>🔍 Browse All 30 Stocks</button>
+            </div>
+          </div>
+
+          {/* Main Panel */}
+          <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            {/* Stock Hero */}
+            <div style={{padding:"13px 20px 0",background:"#0a0e1a",borderBottom:"1px solid #1a2238",flexShrink:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:22,fontWeight:700,letterSpacing:"-1px"}}>{selected}</span>
+                    <span style={{fontSize:11,color:"#475569"}}>{selData.name||selUni.name}</span>
+                    {selData.live&&<span style={{fontSize:9,background:"rgba(34,211,160,0.15)",color:"#22d3a0",padding:"2px 7px",borderRadius:4,fontFamily:"'DM Mono'",fontWeight:700}}>LIVE · {selData.src}</span>}
+                    <span style={{fontSize:9,background:`${RATING_COLOR[selUni.rating]||"#6366f1"}20`,color:RATING_COLOR[selUni.rating]||"#6366f1",padding:"2px 7px",borderRadius:4,fontWeight:700}}>{selUni.rating}</span>
+                    <span style={{fontSize:9,background:`${RISK_COLOR[selUni.risk]||"#64748b"}20`,color:RISK_COLOR[selUni.risk]||"#64748b",padding:"2px 7px",borderRadius:4,fontWeight:600}}>Risk: {selUni.risk}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:10,marginTop:4}}>
+                    <span style={{fontSize:30,fontWeight:700,fontFamily:"'DM Mono'",letterSpacing:"-1px"}}>${selData.price?.toFixed(2)||"--"}</span>
+                    <span style={{fontSize:13,fontWeight:600,fontFamily:"'DM Mono'",color:isPos?"#22d3a0":"#f87171",background:isPos?"rgba(34,211,160,0.1)":"rgba(248,113,113,0.1)",padding:"2px 8px",borderRadius:4}}>
+                      {isPos?"+":""}{selData.change?.toFixed(2)||"0.00"} ({isPos?"+":""}{selData.changePct?.toFixed(2)||"0.00"}%)
+                    </span>
+                  </div>
+                  <div style={{fontSize:10,color:"#64748b",marginTop:4,maxWidth:500,lineHeight:1.4}}>{selUni.why?.slice(0,110)}...</div>
+                </div>
+                <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+                  {[["OPEN",selData.open?.toFixed(2)],["HIGH",selData.high?.toFixed(2)],["LOW",selData.low?.toFixed(2)],["PREV",selData.prevClose?.toFixed(2)],["VOL",selData.volume],["MKT CAP",selData.mktCap],["P/E",selData.pe]].map(([l,v])=>(
+                    <div key={l}>
+                      <div style={{fontSize:8,color:"#334155",fontFamily:"'DM Mono'",letterSpacing:"1px"}}>{l}</div>
+                      <div style={{fontSize:11,fontWeight:600,fontFamily:"'DM Mono'",marginTop:2}}>{v||"N/A"}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:0,marginTop:12}}>
+                {["chat","market"].map(tab=>(
+                  <button key={tab} onClick={()=>setActiveTab(tab)} style={{background:activeTab===tab?"rgba(99,102,241,0.15)":"transparent",border:"none",borderBottom:activeTab===tab?"2px solid #6366f1":"2px solid transparent",color:activeTab===tab?"#a5b4fc":"#475569",padding:"7px 16px",cursor:"pointer",fontSize:11,fontWeight:600,transition:"all 0.15s"}}>
+                    {tab==="chat"?"🤖 AI Assistant":"📊 Market Overview"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chat Tab */}
+            {activeTab==="chat"&&(
+              <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                <div style={{flex:1,overflowY:"auto",padding:"14px 20px",display:"flex",flexDirection:"column",gap:10}}>
+                  {messages.map((msg,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start",animation:"fadein 0.25s ease"}}>
+                      {msg.role==="assistant"&&<div style={{width:26,height:26,borderRadius:7,background:"linear-gradient(135deg,#6366f1,#22d3a0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,marginRight:7,flexShrink:0,alignSelf:"flex-start",marginTop:2}}>🤖</div>}
+                      <div style={{maxWidth:"74%",padding:"9px 13px",borderRadius:msg.role==="user"?"12px 12px 3px 12px":"12px 12px 12px 3px",background:msg.role==="user"?"linear-gradient(135deg,#6366f1,#4f46e5)":"#111827",fontSize:12,lineHeight:1.65,color:msg.role==="user"?"#fff":"#cbd5e1",whiteSpace:"pre-wrap",border:msg.role==="assistant"?"1px solid #1a2238":"none"}}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading&&(
+                    <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <div style={{width:26,height:26,borderRadius:7,background:"linear-gradient(135deg,#6366f1,#22d3a0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>🤖</div>
+                      <div style={{background:"#111827",padding:"9px 13px",borderRadius:"12px 12px 12px 3px",border:"1px solid #1a2238"}}>
+                        <div style={{display:"flex",gap:4}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"#6366f1",animation:`bounce 1.2s ${i*0.2}s infinite`}}/>)}</div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef}/>
+                </div>
+                <div style={{padding:"0 20px 7px",display:"flex",gap:5,flexWrap:"wrap"}}>
+                  {quickPrompts.map((p,i)=>(
+                    <button key={i} onClick={()=>sendMessage(p)} className="btn-hover" style={{background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:16,color:"#818cf8",padding:"3px 11px",fontSize:10,cursor:"pointer",transition:"all 0.15s"}}>{p}</button>
+                  ))}
+                </div>
+                <div style={{padding:"8px 20px 14px",borderTop:"1px solid #1a2238",display:"flex",gap:9}}>
+                  <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendMessage()} placeholder={`Ask about ${selected}, compare stocks, build a portfolio...`} disabled={chatLoading} style={{flex:1,background:"#0d1326",border:"1px solid #1e293b",borderRadius:9,padding:"9px 13px",color:"#e2e8f0",fontSize:12,outline:"none",fontFamily:"'DM Sans'"}}/>
+                  <button onClick={()=>sendMessage()} disabled={chatLoading||!input.trim()} className="btn-hover" style={{background:chatLoading||!input.trim()?"#0d1326":"linear-gradient(135deg,#6366f1,#4f46e5)",border:"none",borderRadius:9,color:chatLoading||!input.trim()?"#334155":"white",width:42,cursor:chatLoading||!input.trim()?"not-allowed":"pointer",fontSize:16,transition:"all 0.15s"}}>➤</button>
+                </div>
+              </div>
+            )}
+
+            {/* Market Tab */}
+            {activeTab==="market"&&(
+              <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                <div style={{padding:"10px 20px",borderBottom:"1px solid #1a2238",display:"flex",gap:5,flexWrap:"wrap",flexShrink:0}}>
+                  {Object.entries(CATS).map(([k,v])=>(
+                    <button key={k} onClick={()=>setActiveCat(k)} className="btn-hover" style={{background:activeCat===k?`${v.color}22`:"transparent",border:`1px solid ${activeCat===k?v.color:"#1e293b"}`,borderRadius:16,color:activeCat===k?v.color:"#475569",padding:"3px 11px",fontSize:10,cursor:"pointer",fontWeight:600,transition:"all 0.15s"}}>
+                      {v.emoji} {v.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{flex:1,overflowY:"auto",padding:"12px 20px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:9}}>
+                    {Object.keys(UNIVERSE).filter(t=>activeCat==="all"||UNIVERSE[t].cat===activeCat).map(ticker=>{
+                      const d=prices[ticker]||{price:UNIVERSE[ticker].seed,change:0,changePct:0};
+                      const u=UNIVERSE[ticker];
+                      const pos=(d.changePct||0)>=0;
+                      const spark=sparklines.current[ticker]||[];
+                      const inWatch=watchlist.includes(ticker);
+                      return(
+                        <div key={ticker} className="card-hover" onClick={()=>{setSelected(ticker);setActiveTab("chat");}} style={{background:"#0a0e1a",border:`1px solid ${selected===ticker?"#6366f1":"#1a2238"}`,borderRadius:11,padding:"12px 13px",cursor:"pointer"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                            <div>
+                              <div style={{display:"flex",alignItems:"center",gap:5}}>
+                                <span style={{fontSize:13,fontWeight:700}}>{ticker}</span>
+                                {d.live&&<div style={{width:4,height:4,borderRadius:"50%",background:"#22d3a0"}}/>}
+                                <span style={{fontSize:8,background:`${RATING_COLOR[u.rating]}22`,color:RATING_COLOR[u.rating],padding:"1px 5px",borderRadius:3,fontWeight:700}}>{u.rating}</span>
+                              </div>
+                              <div style={{fontSize:9,color:"#334155",marginTop:1}}>{u.sector}</div>
+                            </div>
+                            <div style={{textAlign:"right"}}>
+                              <div style={{fontSize:14,fontWeight:700,fontFamily:"'DM Mono'"}}>${d.price?.toFixed(2)}</div>
+                              <div style={{fontSize:10,color:pos?"#22d3a0":"#f87171",fontFamily:"'DM Mono'"}}>{pos?"▲":"▼"} {Math.abs(d.changePct||0).toFixed(2)}%</div>
+                            </div>
+                          </div>
+                          {spark.length>1&&<Sparkline data={spark} positive={pos} width={232} height={26}/>}
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:7}}>
+                            <span style={{fontSize:9,color:"#475569",fontFamily:"'DM Mono'"}}>Risk: <span style={{color:RISK_COLOR[u.risk]}}>{u.risk}</span></span>
+                            <button onClick={e=>{e.stopPropagation();inWatch?removeFromWatchlist(ticker):addToWatchlist(ticker);}} style={{fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:5,border:"none",cursor:"pointer",background:inWatch?"rgba(248,113,113,0.15)":"rgba(34,211,160,0.15)",color:inWatch?"#f87171":"#22d3a0"}}>
+                              {inWatch?"− Remove":"+ Watch"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
